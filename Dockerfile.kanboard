@@ -1,0 +1,11 @@
+FROM kanboard/kanboard:latest
+
+USER root
+
+RUN apk add --no-cache git
+
+# plugin uniquement, sans chown, sans user switch
+RUN mkdir -p /var/www/app/plugins \
+    && git clone https://github.com/kanboard/plugin-gantt.git /var/www/app/plugins/Gantt
+
+USER root
