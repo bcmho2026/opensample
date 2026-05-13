@@ -1,0 +1,60 @@
+FROM jenkins/jenkins:lts
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y \
+        docker.io \
+        curl \
+        git \
+        wget \
+        libicu-dev \
+        ca-certificates \
+        unzip \
+        gnupg \
+        apt-transport-https \
+        mono-complete && \
+    rm -rf /var/lib/apt/lists/*
+
+# Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
+# Docker Compose
+RUN curl -L "https://github.com/docker/compose/releases/download/2.33.1/docker-compose-$(uname -s)-$(uname -m)" \
+    -o /usr/local/bin/docker-compose && \
+    chmod +x /usr/local/bin/docker-compose
+
+# .NET SDK 8,9,10
+RUN wget https://dot.net/v1/dotnet-install.sh && \
+    chmod +x dotnet-install.sh && \
+    ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet && \
+    ./dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet && \
+    ./dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet && \
+    rm dotnet-install.sh
+
+# .NET Core 2.0
+RUN wget https://dot.net/v1/dotnet-install.sh && \
+    chmod +x dotnet-install.sh && \
+    ./dotnet-install.sh --channel 2.0 --install-dir /usr/share/dotnet || true && \
+    rm dotnet-install.sh
+
+ENV DOTNET_ROOT="/usr/share/dotnet"
+ENV PATH="/usr/share/dotnet:${PATH}"
+
+# SONAR (CORRIGÉ)
+ENV PATH="/opt/sonar:/opt/dotnet-tools:${PATH}"
+
+RUN dotnet tool install --tool-path /opt/dotnet-tools dotnet-sonarscanner && \
+    chmod -R 755 /opt/dotnet-tools && \
+    ln -sf /opt/dotnet-tools/dotnet-sonarscanner /usr/local/bin/dotnet-sonarscanner
+
+# SonarScanner CLI
+RUN wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip && \
+    unzip sonar-scanner-cli-*.zip -d /opt && \
+    mv /opt/sonar-scanner-* /opt/sonar-scanner && \
+    chmod +x /opt/sonar-scanner/bin/sonar-scanner && \
+    ln -sf /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner && \
+    rm sonar-scanner-cli-*.zip
+
+USER jenkins
